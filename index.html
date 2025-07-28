@@ -79,6 +79,21 @@
             font-weight: bold;
         }
         
+        .timer-display {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #4ecdc4;
+            z-index: 100;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #4ecdc4;
+            display: none;
+        }
+        
         .controls {
             position: absolute;
             bottom: 20px;
@@ -95,6 +110,29 @@
             margin: 5px 0;
             font-size: 0.9rem;
             color: #4ecdc4;
+        }
+        
+        .restart-game-btn {
+            position: absolute;
+            top: 80px;
+            right: 150px;
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            color: white;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+            display: none;
+            z-index: 100;
+        }
+        
+        .restart-game-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(255, 107, 53, 0.6);
         }
         
         .win-overlay {
@@ -217,6 +255,105 @@
             color: #4ecdc4;
             display: none;
         }
+        
+        .caught-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .caught-message {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #ff4757;
+            margin-bottom: 20px;
+        }
+        
+        .caught-subtext {
+            font-size: 1.5rem;
+            color: #ffa502;
+            margin-bottom: 30px;
+        }
+        
+        .timer {
+            font-size: 4rem;
+            color: #ff6b35;
+            font-weight: bold;
+        }
+        
+        .game-over-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .game-over-title {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #ff4757;
+            margin-bottom: 20px;
+        }
+        
+        .score-display {
+            font-size: 1.5rem;
+            color: #4ecdc4;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .highscore-display {
+            font-size: 2rem;
+            color: #f7931e;
+            font-weight: bold;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .building-value {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #4ecdc4;
+            border-radius: 8px;
+            padding: 5px 10px;
+            color: #4ecdc4;
+            font-size: 0.9rem;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 150;
+            text-align: center;
+            min-width: 80px;
+        }
+        
+        .cooldown-display {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #ff6b35;
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: #ff6b35;
+            font-size: 0.9rem;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 200;
+            text-align: center;
+            min-width: 100px;
+        }
     </style>
 </head>
 <body>
@@ -245,6 +382,9 @@
             </div>
         </div>
         
+        <div class="timer-display" id="timer-display">1:00</div>
+        <button class="restart-game-btn" id="restart-game-btn-ui">RESTART GAME</button>
+        
         <div class="controls">
             <div class="control-item">WASD - Move</div>
             <div class="control-item">E - Interact with buildings</div>
@@ -257,13 +397,34 @@
             <button class="restart-btn" id="restart-btn">PLAY AGAIN</button>
         </div>
         
+        <div class="caught-overlay" id="caught-overlay">
+            <div class="caught-message">CAUGHT BY POLICE!</div>
+            <div class="caught-subtext">Your money has been confiscated</div>
+            <div class="timer" id="caught-timer">3</div>
+        </div>
+        
+        <div class="game-over-overlay" id="game-over-overlay">
+            <div class="game-over-title">TIME'S UP!</div>
+            <div class="score-display" id="final-score">
+                Money: $0<br>
+                Prestige: 0
+            </div>
+            <div class="highscore-display" id="highscore">
+                Highscore: 0
+            </div>
+            <button class="restart-btn" id="restart-game-btn-end">PLAY AGAIN</button>
+        </div>
+        
         <div class="start-screen" id="start-screen">
             <div class="start-title">CRIMINAL UNDERWORLD</div>
             <div class="start-subtitle">Rise from the streets to become the kingpin of the city</div>
             <button class="start-btn" id="start-btn">START GAME</button>
             <div class="start-instructions">
                 <p>Use WASD to move • Press E to interact with buildings • Press R to recruit gang members</p>
-                <p>Goal: Earn $5000 and recruit 3 gang members to win</p>
+                <p>Watch out for police officers! If caught, you lose all money and recruits.</p>
+                <p>Buildings show their value and have visible cooldowns!</p>
+                <p>You have 1 minute to earn as much as possible!</p>
+                <p>Goal: Earn $5000 and recruit 3 gang members to win early</p>
             </div>
         </div>
     </div>
@@ -288,13 +449,28 @@
             }
         }
 
+        // Format time as MM:SS
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
         // Restart game
         function restartGame() {
             gameState.money = 0;
             gameState.prestige = 0;
             gameState.recruits = 0;
             document.getElementById('win-overlay').style.display = 'none';
+            document.getElementById('caught-overlay').style.display = 'none';
+            document.getElementById('game-over-overlay').style.display = 'none';
             updateStats();
+            
+            // Restart the game
+            if (typeof game !== 'undefined') {
+                game.destroy(true);
+                initGame();
+            }
         }
 
         // Start game
@@ -303,13 +479,17 @@
             document.getElementById('phaser-game').style.display = 'block';
             document.querySelector('.loading').style.display = 'block';
             document.querySelector('.stats-container').style.display = 'block';
+            document.querySelector('.timer-display').style.display = 'block';
             document.querySelector('.controls').style.display = 'block';
+            document.getElementById('restart-game-btn-ui').style.display = 'block';
             loadPhaser();
         }
 
         // Set up buttons
         document.getElementById('start-btn').addEventListener('click', startGame);
         document.getElementById('restart-btn').addEventListener('click', restartGame);
+        document.getElementById('restart-game-btn-ui').addEventListener('click', restartGame);
+        document.getElementById('restart-game-btn-end').addEventListener('click', restartGame);
 
         // Load Phaser dynamically to ensure HTTPS
         function loadPhaser() {
@@ -351,46 +531,262 @@
             let player;
             let buildings = [];
             let npcs = [];
+            let police = [];
             let cursors;
             let eKey;
             let rKey;
             let gameScene;
+            let playerFrozen = false;
+            let freezeTimer = 0;
+            let policeSpawnTimer = 0;
+            let gameTimer = 60; // 1 minute in seconds
+            let prestigeTimer = 0;
+            let worldWidth = window.innerWidth;
+            let worldHeight = window.innerHeight - 60;
+            let buildingValueDisplays = [];
+            let cooldownDisplays = [];
+            let gameActive = true;
+            let edgeBuffer = 50; // Buffer zone at edges
 
             function preload() {
-                // No external assets needed
+                // Create sprite textures programmatically
+                // Player sprite (gang member)
+                const playerGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+                playerGraphics.fillStyle(0x4ecdc4, 1);
+                playerGraphics.fillRect(0, 0, 32, 48);
+                playerGraphics.fillStyle(0x000000, 1);
+                playerGraphics.fillRect(8, 8, 4, 4); // eye
+                playerGraphics.fillRect(20, 8, 4, 4); // eye
+                playerGraphics.fillRect(12, 20, 8, 4); // mouth
+                playerGraphics.generateTexture('player', 32, 48);
+
+                // Building sprites with different colors for different payouts
+                const buildingGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+                buildingGraphics.fillStyle(0xf7931e, 1); // $100
+                buildingGraphics.fillRect(0, 0, 64, 64);
+                buildingGraphics.fillStyle(0x000000, 1);
+                buildingGraphics.fillRect(20, 10, 24, 30); // door
+                buildingGraphics.generateTexture('building100', 64, 64);
+
+                const building200Graphics = this.make.graphics({ x: 0, y: 0, add: false });
+                building200Graphics.fillStyle(0xff6b35, 1); // $200
+                building200Graphics.fillRect(0, 0, 64, 64);
+                building200Graphics.fillStyle(0x000000, 1);
+                building200Graphics.fillRect(15, 15, 34, 20); // window
+                building200Graphics.generateTexture('building200', 64, 64);
+
+                const building300Graphics = this.make.graphics({ x: 0, y: 0, add: false });
+                building300Graphics.fillStyle(0x9b5de5, 1); // $300
+                building300Graphics.fillRect(0, 0, 64, 64);
+                building300Graphics.fillStyle(0x000000, 1);
+                building300Graphics.fillRect(25, 20, 14, 20); // door
+                building300Graphics.generateTexture('building300', 64, 64);
+
+                const building400Graphics = this.make.graphics({ x: 0, y: 0, add: false });
+                building400Graphics.fillStyle(0x00bbf9, 1); // $400
+                building400Graphics.fillRect(0, 0, 64, 64);
+                building400Graphics.fillStyle(0x000000, 1);
+                building400Graphics.fillRect(10, 10, 20, 20); // window 1
+                building400Graphics.fillRect(34, 10, 20, 20); // window 2
+                building400Graphics.generateTexture('building400', 64, 64);
+
+                const building500Graphics = this.make.graphics({ x: 0, y: 0, add: false });
+                building500Graphics.fillStyle(0xf15bb5, 1); // $500
+                building500Graphics.fillRect(0, 0, 64, 64);
+                building500Graphics.fillStyle(0x000000, 1);
+                building500Graphics.fillRect(20, 5, 24, 15); // roof window
+                building500Graphics.generateTexture('building500', 64, 64);
+
+                // NPC sprites (recruits)
+                const npcGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+                npcGraphics.fillStyle(0x00f5d4, 1);
+                npcGraphics.fillRect(0, 0, 32, 48);
+                npcGraphics.fillStyle(0x000000, 1);
+                npcGraphics.fillRect(8, 8, 4, 4); // eye
+                npcGraphics.fillRect(20, 8, 4, 4); // eye
+                npcGraphics.fillRect(12, 20, 8, 4); // mouth
+                npcGraphics.generateTexture('npc', 32, 48);
+
+                // Police sprite
+                const policeGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+                policeGraphics.fillStyle(0xff4757, 1);
+                policeGraphics.fillRect(0, 0, 24, 36);
+                policeGraphics.fillStyle(0x000000, 1);
+                policeGraphics.fillRect(6, 6, 3, 3); // eye
+                policeGraphics.fillRect(15, 6, 3, 3); // eye
+                policeGraphics.fillRect(9, 15, 6, 3); // mouth
+                policeGraphics.generateTexture('police', 24, 36);
+            }
+
+            function checkOverlap(x1, y1, width1, height1, x2, y2, width2, height2) {
+                return x1 < x2 + width2 &&
+                       x1 + width1 > x2 &&
+                       y1 < y2 + height2 &&
+                       y1 + height1 > y2;
+            }
+
+            function createBuildingsAndNPCs() {
+                // Clear existing buildings and NPCs
+                buildings.forEach(building => building.destroy());
+                npcs.forEach(npc => npc.destroy());
+                buildingValueDisplays.forEach(display => display.destroy());
+                cooldownDisplays.forEach(display => display.destroy());
+                buildings = [];
+                npcs = [];
+                buildingValueDisplays = [];
+                cooldownDisplays = [];
+
+                // Create 2-3 buildings
+                const numBuildings = 2 + Math.floor(Math.random() * 2);
+                const buildingPositions = [];
+                
+                for (let i = 0; i < numBuildings; i++) {
+                    let x, y;
+                    let validPosition = false;
+                    let attempts = 0;
+                    
+                    // Random building type and payout
+                    const payouts = [100, 200, 300, 400, 500];
+                    const payout = payouts[Math.floor(Math.random() * payouts.length)];
+                    const buildingKey = `building${payout}`;
+                    
+                    while (!validPosition && attempts < 50) {
+                        attempts++;
+                        // Random position (avoid player spawn area and edges)
+                        x = edgeBuffer + Math.random() * (worldWidth - 2 * edgeBuffer);
+                        y = edgeBuffer + Math.random() * (worldHeight - 2 * edgeBuffer);
+                        
+                        // Check for overlap with other buildings
+                        validPosition = true;
+                        for (let j = 0; j < buildingPositions.length; j++) {
+                            const pos = buildingPositions[j];
+                            if (checkOverlap(x, y, 64, 64, pos.x, pos.y, 64, 64)) {
+                                validPosition = false;
+                                break;
+                            }
+                        }
+                        
+                        // Check for overlap with NPCs
+                        if (validPosition) {
+                            for (let j = 0; j < npcs.length; j++) {
+                                const npc = npcs[j];
+                                if (checkOverlap(x, y, 64, 64, npc.x - 16, npc.y - 24, 32, 48)) {
+                                    validPosition = false;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (validPosition) {
+                        buildingPositions.push({x, y});
+                        
+                        const building = gameScene.add.sprite(x, y, buildingKey);
+                        gameScene.physics.add.existing(building);
+                        building.body.immovable = true;
+                        
+                        // Add properties
+                        building.payout = payout;
+                        building.cooldown = 0;
+                        building.lastUsed = 0;
+                        
+                        buildings.push(building);
+                        
+                        // Create building value display
+                        const valueDisplay = gameScene.add.text(x, y - 50, `$${payout}`, {
+                            fontSize: '14px',
+                            fill: '#4ecdc4',
+                            align: 'center',
+                            fontWeight: 'bold'
+                        }).setOrigin(0.5);
+                        buildingValueDisplays.push(valueDisplay);
+                        
+                        // Create cooldown display for this building
+                        const cooldownDisplay = gameScene.add.text(x, y - 70, '', {
+                            fontSize: '12px',
+                            fill: '#ff6b35',
+                            align: 'center'
+                        }).setOrigin(0.5);
+                        cooldownDisplay.setVisible(false);
+                        cooldownDisplays.push(cooldownDisplay);
+                    }
+                }
+
+                // Create 1-4 NPCs
+                const numNPCs = 1 + Math.floor(Math.random() * 4);
+                const npcPositions = [];
+                
+                for (let i = 0; i < numNPCs; i++) {
+                    let x, y;
+                    let validPosition = false;
+                    let attempts = 0;
+                    
+                    while (!validPosition && attempts < 50) {
+                        attempts++;
+                        // Random position (avoid edges)
+                        x = edgeBuffer + Math.random() * (worldWidth - 2 * edgeBuffer);
+                        y = edgeBuffer + Math.random() * (worldHeight - 2 * edgeBuffer);
+                        
+                        // Check for overlap with buildings
+                        validPosition = true;
+                        for (let j = 0; j < buildingPositions.length; j++) {
+                            const pos = buildingPositions[j];
+                            if (checkOverlap(x - 16, y - 24, 32, 48, pos.x, pos.y, 64, 64)) {
+                                validPosition = false;
+                                break;
+                            }
+                        }
+                        
+                        // Check for overlap with other NPCs
+                        if (validPosition) {
+                            for (let j = 0; j < npcPositions.length; j++) {
+                                const pos = npcPositions[j];
+                                if (checkOverlap(x - 16, y - 24, 32, 48, pos.x - 16, pos.y - 24, 32, 48)) {
+                                    validPosition = false;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (validPosition) {
+                        npcPositions.push({x, y});
+                        
+                        const npc = gameScene.add.sprite(x, y, 'npc');
+                        gameScene.physics.add.existing(npc);
+                        npc.body.immovable = true;
+                        
+                        // Add follow properties
+                        npc.recruited = false;
+                        npc.followOffset = { 
+                            x: Phaser.Math.Between(-50, 50), 
+                            y: Phaser.Math.Between(-50, 50) 
+                        };
+                        
+                        npcs.push(npc);
+                    }
+                }
+
+                // Add colliders for new buildings and NPCs
+                buildings.forEach(building => {
+                    gameScene.physics.add.collider(player, building);
+                });
+                
+                npcs.forEach(npc => {
+                    gameScene.physics.add.collider(player, npc);
+                });
             }
 
             function create() {
                 gameScene = this;
                 
-                // Create player as a simple rectangle
-                player = this.add.rectangle(400, 300, 32, 48, 0x4ecdc4);
+                // Create player sprite
+                player = this.add.sprite(400, 300, 'player');
                 this.physics.add.existing(player);
                 player.body.setCollideWorldBounds(true);
                 
-                // Create buildings as rectangles
-                const building1 = this.add.rectangle(200, 200, 64, 64, 0xf7931e);
-                const building2 = this.add.rectangle(600, 400, 64, 64, 0xff6b35);
-                this.physics.add.existing(building1);
-                this.physics.add.existing(building2);
-                building1.body.immovable = true;
-                building2.body.immovable = true;
-                buildings = [building1, building2];
-                
-                // Create NPCs as rectangles
-                const npc1 = this.add.rectangle(300, 100, 32, 48, 0x9b5de5);
-                const npc2 = this.add.rectangle(500, 500, 32, 48, 0x9b5de5);
-                this.physics.add.existing(npc1);
-                this.physics.add.existing(npc2);
-                npc1.body.immovable = true;
-                npc2.body.immovable = true;
-                npcs = [npc1, npc2];
-                
-                // Add follow properties to NPCs
-                npc1.recruited = false;
-                npc1.followOffset = { x: -40, y: 0 };
-                npc2.recruited = false;
-                npc2.followOffset = { x: 40, y: 0 };
+                // Create initial buildings and NPCs
+                createBuildingsAndNPCs();
                 
                 // Input - Capture keys globally
                 cursors = this.input.keyboard.createCursorKeys();
@@ -400,12 +796,6 @@
                 // Enable global keyboard capture
                 this.input.keyboard.addCapture([Phaser.Input.Keyboard.KeyCodes.W, Phaser.Input.Keyboard.KeyCodes.A, Phaser.Input.Keyboard.KeyCodes.S, Phaser.Input.Keyboard.KeyCodes.D]);
                 this.input.keyboard.addCapture([Phaser.Input.Keyboard.KeyCodes.E, Phaser.Input.Keyboard.KeyCodes.R]);
-                
-                // Colliders
-                this.physics.add.collider(player, building1);
-                this.physics.add.collider(player, building2);
-                this.physics.add.collider(player, npc1);
-                this.physics.add.collider(player, npc2);
                 
                 // Focus the game canvas for keyboard input
                 this.input.keyboard.enabled = true;
@@ -425,9 +815,178 @@
                         this.game.canvas.focus();
                     }
                 }, this);
+                
+                // Initialize game timer display
+                document.getElementById('timer-display').textContent = formatTime(gameTimer);
+            }
+
+            function spawnPolice() {
+                // Spawn police at random positions around the edges
+                const side = Math.floor(Math.random() * 4);
+                let x, y;
+                
+                switch(side) {
+                    case 0: // top
+                        x = Math.random() * worldWidth;
+                        y = -20;
+                        break;
+                    case 1: // right
+                        x = worldWidth + 20;
+                        y = Math.random() * worldHeight;
+                        break;
+                    case 2: // bottom
+                        x = Math.random() * worldWidth;
+                        y = worldHeight + 20;
+                        break;
+                    case 3: // left
+                        x = -20;
+                        y = Math.random() * worldHeight;
+                        break;
+                }
+                
+                const policeOfficer = gameScene.add.sprite(x, y, 'police');
+                gameScene.physics.add.existing(policeOfficer);
+                policeOfficer.body.setCollideWorldBounds(true);
+                police.push(policeOfficer);
+                
+                // Add collision with player
+                gameScene.physics.add.overlap(player, policeOfficer, function() {
+                    if (!playerFrozen) {
+                        catchPlayer();
+                    }
+                });
+            }
+
+            function catchPlayer() {
+                playerFrozen = true;
+                player.body.setVelocity(0);
+                
+                // Reset money and recruits
+                gameState.money = 0;
+                gameState.recruits = 0;
+                
+                // Reset all NPCs to unrecruited
+                npcs.forEach(npc => {
+                    npc.recruited = false;
+                });
+                
+                updateStats();
+                
+                // Show caught overlay
+                document.getElementById('caught-overlay').style.display = 'flex';
+                
+                // Start 3 second timer
+                freezeTimer = 3;
+                document.getElementById('caught-timer').textContent = freezeTimer;
+                
+                // Move player to random location
+                player.x = edgeBuffer + Math.random() * (worldWidth - 2 * edgeBuffer);
+                player.y = edgeBuffer + Math.random() * (worldHeight - 2 * edgeBuffer);
+                
+                // Clear all police
+                police.forEach(policeOfficer => {
+                    policeOfficer.destroy();
+                });
+                police = [];
+                
+                // Randomize buildings and NPCs
+                setTimeout(createBuildingsAndNPCs, 1000);
+            }
+
+            function gameOver() {
+                if (!gameActive) return;
+                gameActive = false;
+                
+                // Stop all movement
+                player.body.setVelocity(0);
+                police.forEach(policeOfficer => policeOfficer.body.setVelocity(0));
+                
+                // Show game over screen with final score
+                const highscore = gameState.money * gameState.prestige;
+                document.getElementById('final-score').innerHTML = `
+                    Money: $${gameState.money}<br>
+                    Prestige: ${gameState.prestige}
+                `;
+                document.getElementById('highscore').textContent = `Highscore: ${highscore}`;
+                document.getElementById('game-over-overlay').style.display = 'flex';
             }
 
             function update() {
+                if (!gameActive) return;
+                
+                // Game timer countdown
+                if (!playerFrozen) {
+                    gameTimer -= 1/60; // Assuming 60fps
+                    if (gameTimer <= 0) {
+                        gameTimer = 0;
+                        gameOver();
+                    }
+                    document.getElementById('timer-display').textContent = formatTime(gameTimer);
+                }
+                
+                // Police spawning logic (every 5-10 seconds)
+                policeSpawnTimer++;
+                if (policeSpawnTimer > 300 && police.length < 3) { // 300 frames = 5 seconds at 60fps
+                    spawnPolice();
+                    policeSpawnTimer = 0;
+                }
+                
+                // Update police movement
+                police.forEach(policeOfficer => {
+                    if (!playerFrozen) {
+                        const angle = Phaser.Math.Angle.Between(
+                            policeOfficer.x, policeOfficer.y,
+                            player.x, player.y
+                        );
+                        policeOfficer.body.setVelocity(
+                            Math.cos(angle) * 100,
+                            Math.sin(angle) * 100
+                        );
+                    } else {
+                        policeOfficer.body.setVelocity(0);
+                    }
+                });
+                
+                // Handle freeze timer
+                if (playerFrozen) {
+                    freezeTimer -= 1/60; // Assuming 60fps
+                    if (freezeTimer <= 0) {
+                        playerFrozen = false;
+                        document.getElementById('caught-overlay').style.display = 'none';
+                    } else {
+                        document.getElementById('caught-timer').textContent = Math.ceil(freezeTimer);
+                    }
+                    return; // Skip player movement when frozen
+                }
+                
+                // Update building cooldowns and displays
+                buildings.forEach((building, index) => {
+                    if (building.cooldown > 0) {
+                        building.cooldown -= 1/60;
+                        if (building.cooldown <= 0) {
+                            building.cooldown = 0;
+                            cooldownDisplays[index].setVisible(false);
+                        } else {
+                            cooldownDisplays[index].setText(`Cooldown: ${Math.ceil(building.cooldown)}s`);
+                            cooldownDisplays[index].setVisible(true);
+                            cooldownDisplays[index].setPosition(building.x, building.y - 70);
+                        }
+                    }
+                    // Update building value display position
+                    buildingValueDisplays[index].setPosition(building.x, building.y - 50);
+                });
+                
+                // Prestige ticking - slowly increases based on number of recruits
+                prestigeTimer += 1/60; // Assuming 60fps
+                if (prestigeTimer >= 1) { // Every second
+                    if (gameState.recruits > 0) {
+                        // More recruits = faster prestige gain (1 + recruits multiplier)
+                        gameState.prestige += (1 + gameState.recruits);
+                        updateStats();
+                    }
+                    prestigeTimer = 0;
+                }
+                
                 // Player movement - use direct key checks
                 player.body.setVelocity(0);
                 
@@ -445,16 +1004,35 @@
                     player.body.setVelocityX(200);
                 }
                 
+                // Check if player hits edges of map
+                if (player.x < edgeBuffer || player.x > worldWidth - edgeBuffer ||
+                    player.y < edgeBuffer || player.y > worldHeight - edgeBuffer) {
+                    // Move player away from edge
+                    player.x = Math.max(edgeBuffer, Math.min(player.x, worldWidth - edgeBuffer));
+                    player.y = Math.max(edgeBuffer, Math.min(player.y, worldHeight - edgeBuffer));
+                    
+                    // Randomize buildings and NPCs
+                    createBuildingsAndNPCs();
+                }
+                
                 // Building interaction
                 if (Phaser.Input.Keyboard.JustDown(eKey)) {
-                    buildings.forEach(building => {
+                    buildings.forEach((building, index) => {
                         const distance = Phaser.Math.Distance.Between(
                             player.x, player.y, building.x, building.y
                         );
                         if (distance < 80) {
-                            gameState.money += 100;
-                            gameState.prestige += 20;
-                            updateStats();
+                            if (building.cooldown <= 0) {
+                                gameState.money += building.payout;
+                                gameState.prestige += Math.floor(building.payout / 5); // Prestige based on payout
+                                updateStats();
+                                
+                                // Set random cooldown (3-8 seconds)
+                                building.cooldown = 3 + Math.random() * 5;
+                                cooldownDisplays[index].setText(`Cooldown: ${Math.ceil(building.cooldown)}s`);
+                                cooldownDisplays[index].setVisible(true);
+                                cooldownDisplays[index].setPosition(building.x, building.y - 70);
+                            }
                         }
                     });
                 }
@@ -489,12 +1067,14 @@
             updateStats();
 
             // Create the game
-            const game = new Phaser.Game(config);
+            window.game = new Phaser.Game(config);
 
             // Handle window resize
             window.addEventListener('resize', function() {
-                if (game && game.scale) {
-                    game.scale.resize(window.innerWidth, window.innerHeight - 60);
+                if (window.game && window.game.scale) {
+                    worldWidth = window.innerWidth;
+                    worldHeight = window.innerHeight - 60;
+                    window.game.scale.resize(worldWidth, worldHeight);
                 }
             });
         }

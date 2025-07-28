@@ -100,12 +100,11 @@
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.9);
-            display: flex;
+            display: none;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 1000;
-            display: none;
         }
         
         .win-message {
@@ -215,21 +214,16 @@
         <div class="win-overlay" id="win-overlay">
             <div class="win-message">VICTORY!</div>
             <div class="win-subtext">You've conquered the criminal underworld</div>
-            <button class="restart-btn" onclick="restartGame()">PLAY AGAIN</button>
+            <button class="restart-btn" id="restart-btn">PLAY AGAIN</button>
         </div>
     </div>
 
     <script>
-        // Simple game state management
-        const gameState = {
+        // Game state
+        let gameState = {
             money: 0,
             prestige: 0,
-            recruits: 0,
-            buildings: [],
-            npcs: [],
-            player: null,
-            cursors: null,
-            keys: null
+            recruits: 0
         };
 
         // Update UI stats
@@ -253,6 +247,9 @@
             updateStats();
         }
 
+        // Set up restart button
+        document.getElementById('restart-btn').addEventListener('click', restartGame);
+
         // Phaser game configuration
         const config = {
             type: Phaser.AUTO,
@@ -273,134 +270,101 @@
             }
         };
 
-        const game = new Phaser.Game(config);
+        let gameScene;
+        let player;
+        let buildings = [];
+        let npcs = [];
+        let cursors;
+        let eKey;
+        let rKey;
 
         function preload() {
             // Create simple colored rectangles as placeholders for sprites
-            this.graphics = this.add.graphics();
+            const graphics = this.add.graphics();
             
             // Create texture for player
-            this.graphics.fillStyle(0x4ecdc4, 1);
-            this.graphics.fillRect(0, 0, 32, 48);
-            this.textures.addCanvas('player', this.graphics.canvas);
+            graphics.fillStyle(0x4ecdc4, 1);
+            graphics.fillRect(0, 0, 32, 48);
+            this.textures.addCanvas('player', graphics.canvas);
             
             // Create texture for buildings
-            this.graphics.clear();
-            this.graphics.fillStyle(0xf7931e, 1);
-            this.graphics.fillRect(0, 0, 64, 64);
-            this.textures.addCanvas('building1', this.graphics.canvas);
+            graphics.clear();
+            graphics.fillStyle(0xf7931e, 1);
+            graphics.fillRect(0, 0, 64, 64);
+            this.textures.addCanvas('building1', graphics.canvas);
             
-            this.graphics.clear();
-            this.graphics.fillStyle(0xff6b35, 1);
-            this.graphics.fillRect(0, 0, 64, 64);
-            this.textures.addCanvas('building2', this.graphics.canvas);
+            graphics.clear();
+            graphics.fillStyle(0xff6b35, 1);
+            graphics.fillRect(0, 0, 64, 64);
+            this.textures.addCanvas('building2', graphics.canvas);
             
             // Create texture for NPCs
-            this.graphics.clear();
-            this.graphics.fillStyle(0x9b5de5, 1);
-            this.graphics.fillRect(0, 0, 32, 48);
-            this.textures.addCanvas('npc', this.graphics.canvas);
+            graphics.clear();
+            graphics.fillStyle(0x9b5de5, 1);
+            graphics.fillRect(0, 0, 32, 48);
+            this.textures.addCanvas('npc', graphics.canvas);
+            
+            gameScene = this;
         }
 
         function create() {
-            const scene = this;
-            
             // Create player
-            gameState.player = this.physics.add.sprite(400, 300, 'player');
-            gameState.player.setCollideWorldBounds(true);
+            player = this.physics.add.sprite(400, 300, 'player');
+            player.setCollideWorldBounds(true);
             
             // Create buildings
             const building1 = this.physics.add.sprite(200, 200, 'building1');
             const building2 = this.physics.add.sprite(600, 400, 'building2');
             building1.setImmovable(true);
             building2.setImmovable(true);
-            gameState.buildings = [building1, building2];
+            buildings = [building1, building2];
             
             // Create NPCs
             const npc1 = this.physics.add.sprite(300, 100, 'npc');
             const npc2 = this.physics.add.sprite(500, 500, 'npc');
             npc1.setImmovable(true);
             npc2.setImmovable(true);
-            gameState.npcs = [npc1, npc2];
+            npcs = [npc1, npc2];
             
             // Input
-            gameState.cursors = this.input.keyboard.createCursorKeys();
-            gameState.keys = {
-                e: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E),
-                r: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R)
-            };
+            cursors = this.input.keyboard.createCursorKeys();
+            eKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+            rKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
             
             // Colliders
-            this.physics.add.collider(gameState.player, building1);
-            this.physics.add.collider(gameState.player, building2);
-            this.physics.add.collider(gameState.player, npc1);
-            this.physics.add.collider(gameState.player, npc2);
+            this.physics.add.collider(player, building1);
+            this.physics.add.collider(player, building2);
+            this.physics.add.collider(player, npc1);
+            this.physics.add.collider(player, npc2);
             
-            // Setup popups
-            this.input.on('pointermove', function(pointer) {
-                const buildingPopup = document.getElementById('building-popup');
-                const npcPopup = document.getElementById('npc-popup');
-                
-                let showBuilding = false;
-                let showNPC = false;
-                
-                // Check building proximity
-                gameState.buildings.forEach(building => {
-                    const distance = Phaser.Math.Distance.Between(
-                        pointer.worldX, pointer.worldY, building.x, building.y
-                    );
-                    if (distance < 80) {
-                        buildingPopup.style.display = 'block';
-                        buildingPopup.style.left = (pointer.x + 10) + 'px';
-                        buildingPopup.style.top = (pointer.y - 30) + 'px';
-                        showBuilding = true;
-                    }
-                });
-                
-                if (!showBuilding) {
-                    buildingPopup.style.display = 'none';
-                }
-                
-                // Check NPC proximity
-                gameState.npcs.forEach(npc => {
-                    const distance = Phaser.Math.Distance.Between(
-                        pointer.worldX, pointer.worldY, npc.x, npc.y
-                    );
-                    if (distance < 80) {
-                        npcPopup.style.display = 'block';
-                        npcPopup.style.left = (pointer.x + 10) + 'px';
-                        npcPopup.style.top = (pointer.y - 30) + 'px';
-                        showNPC = true;
-                    }
-                });
-                
-                if (!showNPC) {
-                    npcPopup.style.display = 'none';
-                }
+            // Add follow properties to NPCs
+            npcs.forEach(npc => {
+                npc.recruited = false;
+                npc.followOffset = { x: 0, y: 0 };
             });
         }
 
         function update() {
             // Player movement
-            gameState.player.setVelocity(0);
+            player.setVelocity(0);
             
-            if (gameState.cursors.left.isDown) {
-                gameState.player.setVelocityX(-200);
-            } else if (gameState.cursors.right.isDown) {
-                gameState.player.setVelocityX(200);
+            if (cursors.left.isDown) {
+                player.setVelocityX(-200);
+            } else if (cursors.right.isDown) {
+                player.setVelocityX(200);
             }
             
-            if (gameState.cursors.up.isDown) {
-                gameState.player.setVelocityY(-200);
-            } else if (gameState.cursors.down.isDown) {
-                gameState.player.setVelocityY(200);
+            if (cursors.up.isDown) {
+                player.setVelocityY(-200);
+            } else if (cursors.down.isDown) {
+                player.setVelocityY(200);
             }
             
             // Building interaction
-            if (Phaser.Input.Keyboard.JustDown(gameState.keys.e)) {
-                gameState.buildings.forEach(building => {
+            if (Phaser.Input.Keyboard.JustDown(eKey)) {
+                buildings.forEach(building => {
                     const distance = Phaser.Math.Distance.Between(
-                        gameState.player.x, gameState.player.y, building.x, building.y
+                        player.x, player.y, building.x, building.y
                     );
                     if (distance < 80) {
                         gameState.money += 100;
@@ -411,34 +375,40 @@
             }
             
             // NPC recruitment
-            if (Phaser.Input.Keyboard.JustDown(gameState.keys.r)) {
-                gameState.npcs.forEach(npc => {
+            if (Phaser.Input.Keyboard.JustDown(rKey)) {
+                npcs.forEach(npc => {
                     const distance = Phaser.Math.Distance.Between(
-                        gameState.player.x, gameState.player.y, npc.x, npc.y
+                        player.x, player.y, npc.x, npc.y
                     );
                     if (distance < 80 && gameState.money >= 100 && gameState.prestige >= 50) {
                         gameState.money -= 100;
                         gameState.prestige -= 50;
                         gameState.recruits += 1;
                         // Make NPC follow player
-                        npc.followOffset = { x: Phaser.Math.Between(-40, 40), y: Phaser.Math.Between(-40, 40) };
                         npc.recruited = true;
+                        npc.followOffset = { 
+                            x: Phaser.Math.Between(-40, 40), 
+                            y: Phaser.Math.Between(-40, 40) 
+                        };
                         updateStats();
                     }
                 });
             }
             
             // Update recruited NPCs
-            gameState.npcs.forEach(npc => {
+            npcs.forEach(npc => {
                 if (npc.recruited) {
-                    npc.x = gameState.player.x + (npc.followOffset ? npc.followOffset.x : 0);
-                    npc.y = gameState.player.y + (npc.followOffset ? npc.followOffset.y : 0);
+                    npc.x = player.x + npc.followOffset.x;
+                    npc.y = player.y + npc.followOffset.y;
                 }
             });
         }
 
         // Initialize stats
         updateStats();
+
+        // Create the game
+        const game = new Phaser.Game(config);
     </script>
 </body>
 </html>

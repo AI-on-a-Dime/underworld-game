@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criminal Underworld - Strategy Game</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #fff;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        .game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #phaser-game {
+            flex: 1;
+            width: 100%;
+            height: calc(100vh - 60px);
+        }
+        
+        .header {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #ff6b35;
+        }
+        
+        .title {
+            font-size: 1.8rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .stats-container {
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #ff6b35;
+            z-index: 100;
+            min-width: 200px;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 1.1rem;
+        }
+        
+        .stat-value {
+            color: #f7931e;
+            font-weight: bold;
+        }
+        
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #4ecdc4;
+            z-index: 100;
+        }
+        
+        .control-item {
+            margin: 5px 0;
+            font-size: 0.9rem;
+            color: #4ecdc4;
+        }
+        
+        .win-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .win-message {
+            font-size: 4rem;
+            font-weight: bold;
+            color: #ff6b35;
+            text-shadow: 0 0 20px rgba(255, 107, 53, 0.7);
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+        
+        .win-subtext {
+            font-size: 1.5rem;
+            color: #4ecdc4;
+            margin-bottom: 30px;
+        }
+        
+        .restart-btn {
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            color: white;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+        }
+        
+        .restart-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(255, 107, 53, 0.6);
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .building-popup {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #f7931e;
+            border-radius: 8px;
+            padding: 10px;
+            color: #f7931e;
+            font-size: 0.9rem;
+            pointer-events: none;
+            display: none;
+            z-index: 200;
+        }
+        
+        .npc-popup {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #4ecdc4;
+            border-radius: 8px;
+            padding: 10px;
+            color: #4ecdc4;
+            font-size: 0.9rem;
+            pointer-events: none;
+            display: none;
+            z-index: 200;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <div class="title">CRIMINAL UNDERWORLD</div>
+            <div class="subtitle">Rise to the Top</div>
+        </div>
+        
+        <div id="phaser-game"></div>
+        
+        <div class="stats-container">
+            <div class="stat-item">
+                <span>💰 Money:</span>
+                <span class="stat-value" id="money">$0</span>
+            </div>
+            <div class="stat-item">
+                <span>🌟 Prestige:</span>
+                <span class="stat-value" id="prestige">0</span>
+            </div>
+            <div class="stat-item">
+                <span>👥 Recruits:</span>
+                <span class="stat-value" id="recruits">0</span>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="control-item">WASD - Move</div>
+            <div class="control-item">E - Interact with buildings</div>
+            <div class="control-item">R - Recruit gang members</div>
+        </div>
+        
+        <div class="building-popup" id="building-popup">
+            Press E to collect money and prestige
+        </div>
+        
+        <div class="npc-popup" id="npc-popup">
+            Press R to recruit (Cost: $100 + 50 Prestige)
+        </div>
+        
+        <div class="win-overlay" id="win-overlay">
+            <div class="win-message">VICTORY!</div>
+            <div class="win-subtext">You've conquered the criminal underworld</div>
+            <button class="restart-btn" onclick="restartGame()">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        // Simple game state management
+        const gameState = {
+            money: 0,
+            prestige: 0,
+            recruits: 0,
+            buildings: [],
+            npcs: [],
+            player: null,
+            cursors: null,
+            keys: null
+        };
+
+        // Update UI stats
+        function updateStats() {
+            document.getElementById('money').textContent = `$${gameState.money}`;
+            document.getElementById('prestige').textContent = gameState.prestige;
+            document.getElementById('recruits').textContent = gameState.recruits;
+            
+            // Check win condition
+            if (gameState.money >= 5000 && gameState.recruits >= 3) {
+                document.getElementById('win-overlay').style.display = 'flex';
+            }
+        }
+
+        // Restart game
+        function restartGame() {
+            gameState.money = 0;
+            gameState.prestige = 0;
+            gameState.recruits = 0;
+            document.getElementById('win-overlay').style.display = 'none';
+            updateStats();
+        }
+
+        // Phaser game configuration
+        const config = {
+            type: Phaser.AUTO,
+            width: window.innerWidth,
+            height: window.innerHeight - 60,
+            parent: 'phaser-game',
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 0 },
+                    debug: false
+                }
+            },
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            }
+        };
+
+        const game = new Phaser.Game(config);
+
+        function preload() {
+            // Create simple colored rectangles as placeholders for sprites
+            this.graphics = this.add.graphics();
+            
+            // Create texture for player
+            this.graphics.fillStyle(0x4ecdc4, 1);
+            this.graphics.fillRect(0, 0, 32, 48);
+            this.textures.addCanvas('player', this.graphics.canvas);
+            
+            // Create texture for buildings
+            this.graphics.clear();
+            this.graphics.fillStyle(0xf7931e, 1);
+            this.graphics.fillRect(0, 0, 64, 64);
+            this.textures.addCanvas('building1', this.graphics.canvas);
+            
+            this.graphics.clear();
+            this.graphics.fillStyle(0xff6b35, 1);
+            this.graphics.fillRect(0, 0, 64, 64);
+            this.textures.addCanvas('building2', this.graphics.canvas);
+            
+            // Create texture for NPCs
+            this.graphics.clear();
+            this.graphics.fillStyle(0x9b5de5, 1);
+            this.graphics.fillRect(0, 0, 32, 48);
+            this.textures.addCanvas('npc', this.graphics.canvas);
+        }
+
+        function create() {
+            const scene = this;
+            
+            // Create player
+            gameState.player = this.physics.add.sprite(400, 300, 'player');
+            gameState.player.setCollideWorldBounds(true);
+            
+            // Create buildings
+            const building1 = this.physics.add.sprite(200, 200, 'building1');
+            const building2 = this.physics.add.sprite(600, 400, 'building2');
+            building1.setImmovable(true);
+            building2.setImmovable(true);
+            gameState.buildings = [building1, building2];
+            
+            // Create NPCs
+            const npc1 = this.physics.add.sprite(300, 100, 'npc');
+            const npc2 = this.physics.add.sprite(500, 500, 'npc');
+            npc1.setImmovable(true);
+            npc2.setImmovable(true);
+            gameState.npcs = [npc1, npc2];
+            
+            // Input
+            gameState.cursors = this.input.keyboard.createCursorKeys();
+            gameState.keys = {
+                e: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E),
+                r: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R)
+            };
+            
+            // Colliders
+            this.physics.add.collider(gameState.player, building1);
+            this.physics.add.collider(gameState.player, building2);
+            this.physics.add.collider(gameState.player, npc1);
+            this.physics.add.collider(gameState.player, npc2);
+            
+            // Setup popups
+            this.input.on('pointermove', function(pointer) {
+                const buildingPopup = document.getElementById('building-popup');
+                const npcPopup = document.getElementById('npc-popup');
+                
+                let showBuilding = false;
+                let showNPC = false;
+                
+                // Check building proximity
+                gameState.buildings.forEach(building => {
+                    const distance = Phaser.Math.Distance.Between(
+                        pointer.worldX, pointer.worldY, building.x, building.y
+                    );
+                    if (distance < 80) {
+                        buildingPopup.style.display = 'block';
+                        buildingPopup.style.left = (pointer.x + 10) + 'px';
+                        buildingPopup.style.top = (pointer.y - 30) + 'px';
+                        showBuilding = true;
+                    }
+                });
+                
+                if (!showBuilding) {
+                    buildingPopup.style.display = 'none';
+                }
+                
+                // Check NPC proximity
+                gameState.npcs.forEach(npc => {
+                    const distance = Phaser.Math.Distance.Between(
+                        pointer.worldX, pointer.worldY, npc.x, npc.y
+                    );
+                    if (distance < 80) {
+                        npcPopup.style.display = 'block';
+                        npcPopup.style.left = (pointer.x + 10) + 'px';
+                        npcPopup.style.top = (pointer.y - 30) + 'px';
+                        showNPC = true;
+                    }
+                });
+                
+                if (!showNPC) {
+                    npcPopup.style.display = 'none';
+                }
+            });
+        }
+
+        function update() {
+            // Player movement
+            gameState.player.setVelocity(0);
+            
+            if (gameState.cursors.left.isDown) {
+                gameState.player.setVelocityX(-200);
+            } else if (gameState.cursors.right.isDown) {
+                gameState.player.setVelocityX(200);
+            }
+            
+            if (gameState.cursors.up.isDown) {
+                gameState.player.setVelocityY(-200);
+            } else if (gameState.cursors.down.isDown) {
+                gameState.player.setVelocityY(200);
+            }
+            
+            // Building interaction
+            if (Phaser.Input.Keyboard.JustDown(gameState.keys.e)) {
+                gameState.buildings.forEach(building => {
+                    const distance = Phaser.Math.Distance.Between(
+                        gameState.player.x, gameState.player.y, building.x, building.y
+                    );
+                    if (distance < 80) {
+                        gameState.money += 100;
+                        gameState.prestige += 20;
+                        updateStats();
+                    }
+                });
+            }
+            
+            // NPC recruitment
+            if (Phaser.Input.Keyboard.JustDown(gameState.keys.r)) {
+                gameState.npcs.forEach(npc => {
+                    const distance = Phaser.Math.Distance.Between(
+                        gameState.player.x, gameState.player.y, npc.x, npc.y
+                    );
+                    if (distance < 80 && gameState.money >= 100 && gameState.prestige >= 50) {
+                        gameState.money -= 100;
+                        gameState.prestige -= 50;
+                        gameState.recruits += 1;
+                        // Make NPC follow player
+                        npc.followOffset = { x: Phaser.Math.Between(-40, 40), y: Phaser.Math.Between(-40, 40) };
+                        npc.recruited = true;
+                        updateStats();
+                    }
+                });
+            }
+            
+            // Update recruited NPCs
+            gameState.npcs.forEach(npc => {
+                if (npc.recruited) {
+                    npc.x = gameState.player.x + (npc.followOffset ? npc.followOffset.x : 0);
+                    npc.y = gameState.player.y + (npc.followOffset ? npc.followOffset.y : 0);
+                }
+            });
+        }
+
+        // Initialize stats
+        updateStats();
+    </script>
+</body>
+</html>

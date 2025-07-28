@@ -145,32 +145,6 @@
             50% { transform: scale(1.05); }
             100% { transform: scale(1); }
         }
-        
-        .building-popup {
-            position: absolute;
-            background: rgba(0, 0, 0, 0.8);
-            border: 2px solid #f7931e;
-            border-radius: 8px;
-            padding: 10px;
-            color: #f7931e;
-            font-size: 0.9rem;
-            pointer-events: none;
-            display: none;
-            z-index: 200;
-        }
-        
-        .npc-popup {
-            position: absolute;
-            background: rgba(0, 0, 0, 0.8);
-            border: 2px solid #4ecdc4;
-            border-radius: 8px;
-            padding: 10px;
-            color: #4ecdc4;
-            font-size: 0.9rem;
-            pointer-events: none;
-            display: none;
-            z-index: 200;
-        }
     </style>
 </head>
 <body>
@@ -201,14 +175,6 @@
             <div class="control-item">WASD - Move</div>
             <div class="control-item">E - Interact with buildings</div>
             <div class="control-item">R - Recruit gang members</div>
-        </div>
-        
-        <div class="building-popup" id="building-popup">
-            Press E to collect money and prestige
-        </div>
-        
-        <div class="npc-popup" id="npc-popup">
-            Press R to recruit (Cost: $100 + 50 Prestige)
         </div>
         
         <div class="win-overlay" id="win-overlay">
@@ -270,7 +236,6 @@
             }
         };
 
-        let gameScene;
         let player;
         let buildings = [];
         let npcs = [];
@@ -279,52 +244,38 @@
         let rKey;
 
         function preload() {
-            // Create simple colored rectangles as placeholders for sprites
-            const graphics = this.add.graphics();
-            
-            // Create texture for player
-            graphics.fillStyle(0x4ecdc4, 1);
-            graphics.fillRect(0, 0, 32, 48);
-            this.textures.addCanvas('player', graphics.canvas);
-            
-            // Create texture for buildings
-            graphics.clear();
-            graphics.fillStyle(0xf7931e, 1);
-            graphics.fillRect(0, 0, 64, 64);
-            this.textures.addCanvas('building1', graphics.canvas);
-            
-            graphics.clear();
-            graphics.fillStyle(0xff6b35, 1);
-            graphics.fillRect(0, 0, 64, 64);
-            this.textures.addCanvas('building2', graphics.canvas);
-            
-            // Create texture for NPCs
-            graphics.clear();
-            graphics.fillStyle(0x9b5de5, 1);
-            graphics.fillRect(0, 0, 32, 48);
-            this.textures.addCanvas('npc', graphics.canvas);
-            
-            gameScene = this;
+            // No external assets needed - we'll draw shapes
         }
 
         function create() {
-            // Create player
-            player = this.physics.add.sprite(400, 300, 'player');
-            player.setCollideWorldBounds(true);
+            // Create player as a simple rectangle
+            player = this.add.rectangle(400, 300, 32, 48, 0x4ecdc4);
+            this.physics.add.existing(player);
+            player.body.setCollideWorldBounds(true);
             
-            // Create buildings
-            const building1 = this.physics.add.sprite(200, 200, 'building1');
-            const building2 = this.physics.add.sprite(600, 400, 'building2');
-            building1.setImmovable(true);
-            building2.setImmovable(true);
+            // Create buildings as rectangles
+            const building1 = this.add.rectangle(200, 200, 64, 64, 0xf7931e);
+            const building2 = this.add.rectangle(600, 400, 64, 64, 0xff6b35);
+            this.physics.add.existing(building1);
+            this.physics.add.existing(building2);
+            building1.body.immovable = true;
+            building2.body.immovable = true;
             buildings = [building1, building2];
             
-            // Create NPCs
-            const npc1 = this.physics.add.sprite(300, 100, 'npc');
-            const npc2 = this.physics.add.sprite(500, 500, 'npc');
-            npc1.setImmovable(true);
-            npc2.setImmovable(true);
+            // Create NPCs as rectangles
+            const npc1 = this.add.rectangle(300, 100, 32, 48, 0x9b5de5);
+            const npc2 = this.add.rectangle(500, 500, 32, 48, 0x9b5de5);
+            this.physics.add.existing(npc1);
+            this.physics.add.existing(npc2);
+            npc1.body.immovable = true;
+            npc2.body.immovable = true;
             npcs = [npc1, npc2];
+            
+            // Add follow properties to NPCs
+            npc1.recruited = false;
+            npc1.followOffset = { x: -40, y: 0 };
+            npc2.recruited = false;
+            npc2.followOffset = { x: 40, y: 0 };
             
             // Input
             cursors = this.input.keyboard.createCursorKeys();
@@ -336,28 +287,22 @@
             this.physics.add.collider(player, building2);
             this.physics.add.collider(player, npc1);
             this.physics.add.collider(player, npc2);
-            
-            // Add follow properties to NPCs
-            npcs.forEach(npc => {
-                npc.recruited = false;
-                npc.followOffset = { x: 0, y: 0 };
-            });
         }
 
         function update() {
             // Player movement
-            player.setVelocity(0);
+            player.body.setVelocity(0);
             
             if (cursors.left.isDown) {
-                player.setVelocityX(-200);
+                player.body.setVelocityX(-200);
             } else if (cursors.right.isDown) {
-                player.setVelocityX(200);
+                player.body.setVelocityX(200);
             }
             
             if (cursors.up.isDown) {
-                player.setVelocityY(-200);
+                player.body.setVelocityY(-200);
             } else if (cursors.down.isDown) {
-                player.setVelocityY(200);
+                player.body.setVelocityY(200);
             }
             
             // Building interaction
@@ -386,10 +331,6 @@
                         gameState.recruits += 1;
                         // Make NPC follow player
                         npc.recruited = true;
-                        npc.followOffset = { 
-                            x: Phaser.Math.Between(-40, 40), 
-                            y: Phaser.Math.Between(-40, 40) 
-                        };
                         updateStats();
                     }
                 });
@@ -409,6 +350,11 @@
 
         // Create the game
         const game = new Phaser.Game(config);
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            game.scale.resize(window.innerWidth, window.innerHeight - 60);
+        });
     </script>
 </body>
 </html>

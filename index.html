@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Criminal Underworld - Strategy Game</title>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -18,6 +17,8 @@
             color: #fff;
             min-height: 100vh;
             overflow: hidden;
+            margin: 0;
+            padding: 0;
         }
         
         .game-container {
@@ -32,6 +33,7 @@
             flex: 1;
             width: 100%;
             height: calc(100vh - 60px);
+            display: none;
         }
         
         .header {
@@ -62,6 +64,7 @@
             border: 1px solid #ff6b35;
             z-index: 100;
             min-width: 200px;
+            display: none;
         }
         
         .stat-item {
@@ -85,6 +88,7 @@
             border-radius: 10px;
             border: 1px solid #4ecdc4;
             z-index: 100;
+            display: none;
         }
         
         .control-item {
@@ -145,6 +149,74 @@
             50% { transform: scale(1.05); }
             100% { transform: scale(1); }
         }
+        
+        .start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .start-title {
+            font-size: 4rem;
+            font-weight: bold;
+            color: #ff6b35;
+            text-shadow: 0 0 20px rgba(255, 107, 53, 0.7);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .start-subtitle {
+            font-size: 1.5rem;
+            color: #4ecdc4;
+            margin-bottom: 50px;
+            text-align: center;
+            max-width: 600px;
+            line-height: 1.5;
+        }
+        
+        .start-btn {
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            border: none;
+            padding: 20px 50px;
+            font-size: 1.5rem;
+            color: white;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+        }
+        
+        .start-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(255, 107, 53, 0.6);
+        }
+        
+        .start-instructions {
+            margin-top: 30px;
+            text-align: center;
+            color: #aaa;
+            max-width: 500px;
+            line-height: 1.6;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            color: #4ecdc4;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -154,7 +226,9 @@
             <div class="subtitle">Rise to the Top</div>
         </div>
         
-        <div id="phaser-game"></div>
+        <div id="phaser-game">
+            <div class="loading">Loading game...</div>
+        </div>
         
         <div class="stats-container">
             <div class="stat-item">
@@ -181,6 +255,16 @@
             <div class="win-message">VICTORY!</div>
             <div class="win-subtext">You've conquered the criminal underworld</div>
             <button class="restart-btn" id="restart-btn">PLAY AGAIN</button>
+        </div>
+        
+        <div class="start-screen" id="start-screen">
+            <div class="start-title">CRIMINAL UNDERWORLD</div>
+            <div class="start-subtitle">Rise from the streets to become the kingpin of the city</div>
+            <button class="start-btn" id="start-btn">START GAME</button>
+            <div class="start-instructions">
+                <p>Use WASD to move • Press E to interact with buildings • Press R to recruit gang members</p>
+                <p>Goal: Earn $5000 and recruit 3 gang members to win</p>
+            </div>
         </div>
     </div>
 
@@ -213,148 +297,207 @@
             updateStats();
         }
 
-        // Set up restart button
+        // Start game
+        function startGame() {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('phaser-game').style.display = 'block';
+            document.querySelector('.loading').style.display = 'block';
+            document.querySelector('.stats-container').style.display = 'block';
+            document.querySelector('.controls').style.display = 'block';
+            loadPhaser();
+        }
+
+        // Set up buttons
+        document.getElementById('start-btn').addEventListener('click', startGame);
         document.getElementById('restart-btn').addEventListener('click', restartGame);
 
-        // Phaser game configuration
-        const config = {
-            type: Phaser.AUTO,
-            width: window.innerWidth,
-            height: window.innerHeight - 60,
-            parent: 'phaser-game',
-            physics: {
-                default: 'arcade',
-                arcade: {
-                    gravity: { y: 0 },
-                    debug: false
-                }
-            },
-            scene: {
-                preload: preload,
-                create: create,
-                update: update
-            }
-        };
-
-        let player;
-        let buildings = [];
-        let npcs = [];
-        let cursors;
-        let eKey;
-        let rKey;
-
-        function preload() {
-            // No external assets needed - we'll draw shapes
-        }
-
-        function create() {
-            // Create player as a simple rectangle
-            player = this.add.rectangle(400, 300, 32, 48, 0x4ecdc4);
-            this.physics.add.existing(player);
-            player.body.setCollideWorldBounds(true);
-            
-            // Create buildings as rectangles
-            const building1 = this.add.rectangle(200, 200, 64, 64, 0xf7931e);
-            const building2 = this.add.rectangle(600, 400, 64, 64, 0xff6b35);
-            this.physics.add.existing(building1);
-            this.physics.add.existing(building2);
-            building1.body.immovable = true;
-            building2.body.immovable = true;
-            buildings = [building1, building2];
-            
-            // Create NPCs as rectangles
-            const npc1 = this.add.rectangle(300, 100, 32, 48, 0x9b5de5);
-            const npc2 = this.add.rectangle(500, 500, 32, 48, 0x9b5de5);
-            this.physics.add.existing(npc1);
-            this.physics.add.existing(npc2);
-            npc1.body.immovable = true;
-            npc2.body.immovable = true;
-            npcs = [npc1, npc2];
-            
-            // Add follow properties to NPCs
-            npc1.recruited = false;
-            npc1.followOffset = { x: -40, y: 0 };
-            npc2.recruited = false;
-            npc2.followOffset = { x: 40, y: 0 };
-            
-            // Input
-            cursors = this.input.keyboard.createCursorKeys();
-            eKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
-            rKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
-            
-            // Colliders
-            this.physics.add.collider(player, building1);
-            this.physics.add.collider(player, building2);
-            this.physics.add.collider(player, npc1);
-            this.physics.add.collider(player, npc2);
-        }
-
-        function update() {
-            // Player movement
-            player.body.setVelocity(0);
-            
-            if (cursors.left.isDown) {
-                player.body.setVelocityX(-200);
-            } else if (cursors.right.isDown) {
-                player.body.setVelocityX(200);
-            }
-            
-            if (cursors.up.isDown) {
-                player.body.setVelocityY(-200);
-            } else if (cursors.down.isDown) {
-                player.body.setVelocityY(200);
-            }
-            
-            // Building interaction
-            if (Phaser.Input.Keyboard.JustDown(eKey)) {
-                buildings.forEach(building => {
-                    const distance = Phaser.Math.Distance.Between(
-                        player.x, player.y, building.x, building.y
-                    );
-                    if (distance < 80) {
-                        gameState.money += 100;
-                        gameState.prestige += 20;
-                        updateStats();
-                    }
-                });
-            }
-            
-            // NPC recruitment
-            if (Phaser.Input.Keyboard.JustDown(rKey)) {
-                npcs.forEach(npc => {
-                    const distance = Phaser.Math.Distance.Between(
-                        player.x, player.y, npc.x, npc.y
-                    );
-                    if (distance < 80 && gameState.money >= 100 && gameState.prestige >= 50) {
-                        gameState.money -= 100;
-                        gameState.prestige -= 50;
-                        gameState.recruits += 1;
-                        // Make NPC follow player
-                        npc.recruited = true;
-                        updateStats();
-                    }
-                });
-            }
-            
-            // Update recruited NPCs
-            npcs.forEach(npc => {
-                if (npc.recruited) {
-                    npc.x = player.x + npc.followOffset.x;
-                    npc.y = player.y + npc.followOffset.y;
-                }
+        // Load Phaser dynamically to ensure HTTPS
+        function loadPhaser() {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js';
+                script.onload = function() {
+                    document.querySelector('.loading').style.display = 'none';
+                    initGame();
+                    resolve();
+                };
+                script.onerror = reject;
+                document.head.appendChild(script);
             });
         }
 
-        // Initialize stats
-        updateStats();
+        // Initialize game after Phaser loads
+        function initGame() {
+            // Phaser game configuration
+            const config = {
+                type: Phaser.AUTO,
+                width: window.innerWidth,
+                height: window.innerHeight - 60,
+                parent: 'phaser-game',
+                physics: {
+                    default: 'arcade',
+                    arcade: {
+                        gravity: { y: 0 },
+                        debug: false
+                    }
+                },
+                scene: {
+                    preload: preload,
+                    create: create,
+                    update: update
+                }
+            };
 
-        // Create the game
-        const game = new Phaser.Game(config);
+            let player;
+            let buildings = [];
+            let npcs = [];
+            let cursors;
+            let eKey;
+            let rKey;
+            let gameScene;
 
-        // Handle window resize
-        window.addEventListener('resize', function() {
-            game.scale.resize(window.innerWidth, window.innerHeight - 60);
-        });
+            function preload() {
+                // No external assets needed
+            }
+
+            function create() {
+                gameScene = this;
+                
+                // Create player as a simple rectangle
+                player = this.add.rectangle(400, 300, 32, 48, 0x4ecdc4);
+                this.physics.add.existing(player);
+                player.body.setCollideWorldBounds(true);
+                
+                // Create buildings as rectangles
+                const building1 = this.add.rectangle(200, 200, 64, 64, 0xf7931e);
+                const building2 = this.add.rectangle(600, 400, 64, 64, 0xff6b35);
+                this.physics.add.existing(building1);
+                this.physics.add.existing(building2);
+                building1.body.immovable = true;
+                building2.body.immovable = true;
+                buildings = [building1, building2];
+                
+                // Create NPCs as rectangles
+                const npc1 = this.add.rectangle(300, 100, 32, 48, 0x9b5de5);
+                const npc2 = this.add.rectangle(500, 500, 32, 48, 0x9b5de5);
+                this.physics.add.existing(npc1);
+                this.physics.add.existing(npc2);
+                npc1.body.immovable = true;
+                npc2.body.immovable = true;
+                npcs = [npc1, npc2];
+                
+                // Add follow properties to NPCs
+                npc1.recruited = false;
+                npc1.followOffset = { x: -40, y: 0 };
+                npc2.recruited = false;
+                npc2.followOffset = { x: 40, y: 0 };
+                
+                // Input - Capture keys globally
+                cursors = this.input.keyboard.createCursorKeys();
+                eKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+                rKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+                
+                // Enable global keyboard capture
+                this.input.keyboard.addCapture([Phaser.Input.Keyboard.KeyCodes.W, Phaser.Input.Keyboard.KeyCodes.A, Phaser.Input.Keyboard.KeyCodes.S, Phaser.Input.Keyboard.KeyCodes.D]);
+                this.input.keyboard.addCapture([Phaser.Input.Keyboard.KeyCodes.E, Phaser.Input.Keyboard.KeyCodes.R]);
+                
+                // Colliders
+                this.physics.add.collider(player, building1);
+                this.physics.add.collider(player, building2);
+                this.physics.add.collider(player, npc1);
+                this.physics.add.collider(player, npc2);
+                
+                // Focus the game canvas for keyboard input
+                this.input.keyboard.enabled = true;
+                
+                // Add click to focus message
+                const focusText = this.add.text(this.cameras.main.width / 2, 50, 'Click to focus game controls', {
+                    fontSize: '20px',
+                    fill: '#ff6b35',
+                    align: 'center'
+                }).setOrigin(0.5);
+                
+                // Remove focus text on first click
+                this.input.once('pointerdown', function() {
+                    focusText.destroy();
+                    // Force focus on canvas
+                    if (this.game.canvas) {
+                        this.game.canvas.focus();
+                    }
+                }, this);
+            }
+
+            function update() {
+                // Player movement - use direct key checks
+                player.body.setVelocity(0);
+                
+                // Check if keys are down using the keyboard manager
+                if (gameScene.input.keyboard.addKey('W').isDown || cursors.up.isDown) {
+                    player.body.setVelocityY(-200);
+                }
+                if (gameScene.input.keyboard.addKey('S').isDown || cursors.down.isDown) {
+                    player.body.setVelocityY(200);
+                }
+                if (gameScene.input.keyboard.addKey('A').isDown || cursors.left.isDown) {
+                    player.body.setVelocityX(-200);
+                }
+                if (gameScene.input.keyboard.addKey('D').isDown || cursors.right.isDown) {
+                    player.body.setVelocityX(200);
+                }
+                
+                // Building interaction
+                if (Phaser.Input.Keyboard.JustDown(eKey)) {
+                    buildings.forEach(building => {
+                        const distance = Phaser.Math.Distance.Between(
+                            player.x, player.y, building.x, building.y
+                        );
+                        if (distance < 80) {
+                            gameState.money += 100;
+                            gameState.prestige += 20;
+                            updateStats();
+                        }
+                    });
+                }
+                
+                // NPC recruitment
+                if (Phaser.Input.Keyboard.JustDown(rKey)) {
+                    npcs.forEach(npc => {
+                        const distance = Phaser.Math.Distance.Between(
+                            player.x, player.y, npc.x, npc.y
+                        );
+                        if (distance < 80 && gameState.money >= 100 && gameState.prestige >= 50) {
+                            gameState.money -= 100;
+                            gameState.prestige -= 50;
+                            gameState.recruits += 1;
+                            // Make NPC follow player
+                            npc.recruited = true;
+                            updateStats();
+                        }
+                    });
+                }
+                
+                // Update recruited NPCs
+                npcs.forEach(npc => {
+                    if (npc.recruited) {
+                        npc.x = player.x + npc.followOffset.x;
+                        npc.y = player.y + npc.followOffset.y;
+                    }
+                });
+            }
+
+            // Initialize stats
+            updateStats();
+
+            // Create the game
+            const game = new Phaser.Game(config);
+
+            // Handle window resize
+            window.addEventListener('resize', function() {
+                if (game && game.scale) {
+                    game.scale.resize(window.innerWidth, window.innerHeight - 60);
+                }
+            });
+        }
     </script>
 </body>
 </html>
